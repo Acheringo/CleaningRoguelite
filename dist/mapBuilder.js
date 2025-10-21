@@ -31,7 +31,6 @@ export class Map {
         this.rumbi = rumbi;
     }
     createGrid() {
-        var _a;
         const grid = [];
         let numberOfChargers = 0;
         for (let y = 0; y < this.height; y++) {
@@ -60,19 +59,18 @@ export class Map {
         if (numberOfChargers === 0) {
             const chargerX = Math.floor(Math.random() * (this.width - 2)) + 1;
             const chargerY = Math.floor(Math.random() * (this.height - 2)) + 1;
-            if (((_a = grid[chargerY]) === null || _a === void 0 ? void 0 : _a[chargerX]) !== undefined && grid[chargerY][chargerX].getState() !== tileState.WALL) {
+            if (grid[chargerY]?.[chargerX] !== undefined && grid[chargerY][chargerX].getState() !== tileState.WALL) {
                 grid[chargerY][chargerX] = new Tile(tileState.CHARGER);
             }
         }
         return grid;
     }
     showMap() {
-        var _a, _b;
         const mapDiv = document.getElementById('map');
         for (let y = 0; y < this.height; y++) {
             let row = '';
             for (let x = 0; x < this.width; x++) {
-                const tile = (_b = (_a = this.grid[y]) === null || _a === void 0 ? void 0 : _a[x]) === null || _b === void 0 ? void 0 : _b.getState();
+                const tile = this.grid[y]?.[x]?.getState();
                 if (tile !== undefined) {
                     if (this.rumbi.position.x === x && this.rumbi.position.y === y) {
                         row += 'O';

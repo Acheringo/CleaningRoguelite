@@ -16,29 +16,28 @@ let rumbi = new Rumba(1, RumbaStatus.IDLE);
 let map;
 rumbi.changePosition(25, 25);
 document.addEventListener("keydown", (event) => {
-    var _a, _b, _c, _d;
     if (moveAllowed) {
         switch (event.key) {
             case "ArrowUp":
-                if (((_a = map.getTile(rumbi.position.x, rumbi.position.y - 1)) === null || _a === void 0 ? void 0 : _a.getState()) !== tileState.WALL && rumbi.getBattery() > 0) {
+                if (map.getTile(rumbi.position.x, rumbi.position.y - 1)?.getState() !== tileState.WALL && rumbi.getBattery() > 0) {
                     rumbi.changePosition(rumbi.position.x, rumbi.position.y - 1);
                     moveAllowed = false;
                 }
                 break;
             case "ArrowDown":
-                if (((_b = map.getTile(rumbi.position.x, rumbi.position.y + 1)) === null || _b === void 0 ? void 0 : _b.getState()) !== tileState.WALL && rumbi.getBattery() > 0) {
+                if (map.getTile(rumbi.position.x, rumbi.position.y + 1)?.getState() !== tileState.WALL && rumbi.getBattery() > 0) {
                     rumbi.changePosition(rumbi.position.x, rumbi.position.y + 1);
                     moveAllowed = false;
                 }
                 break;
             case "ArrowLeft":
-                if (((_c = map.getTile(rumbi.position.x - 1, rumbi.position.y)) === null || _c === void 0 ? void 0 : _c.getState()) !== tileState.WALL && rumbi.getBattery() > 0) {
+                if (map.getTile(rumbi.position.x - 1, rumbi.position.y)?.getState() !== tileState.WALL && rumbi.getBattery() > 0) {
                     rumbi.changePosition(rumbi.position.x - 1, rumbi.position.y);
                     moveAllowed = false;
                 }
                 break;
             case "ArrowRight":
-                if (((_d = map.getTile(rumbi.position.x + 1, rumbi.position.y)) === null || _d === void 0 ? void 0 : _d.getState()) !== tileState.WALL && rumbi.getBattery() > 0) {
+                if (map.getTile(rumbi.position.x + 1, rumbi.position.y)?.getState() !== tileState.WALL && rumbi.getBattery() > 0) {
                     rumbi.changePosition(rumbi.position.x + 1, rumbi.position.y);
                     moveAllowed = false;
                 }
