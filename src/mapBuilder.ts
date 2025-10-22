@@ -110,7 +110,6 @@ export class Map{
                     }
                 }
             }
-            console.log(row);
             if(mapDiv) {
                 mapDiv.innerHTML += `<pre>${row}</pre>`;
             }
