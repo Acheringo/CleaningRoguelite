@@ -56,7 +56,7 @@ export class Map{
                 else if(this.healProbability < Math.random() && Math.random() < (this.expProbability + this.healProbability)){
                     row.push(new Tile(tileState.POWERUP));
                 }
-                else if((this.healProbability+this.expProbability)<Math.random() && Math.random()<(this.dirtProbability + this.expProbability + this.healProbability)){
+                else if((this.healProbability+this.expProbability)<Math.random() && Math.random()<(this.dirtProbability + this.expProbability + this.healProbability)&& !(x===this.width/2 && y===this.height/2)){
                     row.push(new Tile(tileState.DIRT));
                     this.toClean++;
                 }
@@ -69,6 +69,9 @@ export class Map{
         if(numberOfChargers===0){
             const chargerX=Math.floor(Math.random()*(this.width-2))+1;
             const chargerY=Math.floor(Math.random()*(this.height-2))+1;
+            if(grid[chargerY]?.[chargerX]!==undefined && grid[chargerY][chargerX].getState()===tileState.DIRT){
+                this.toClean--;
+            }
             if(grid[chargerY]?.[chargerX]!==undefined && grid[chargerY][chargerX].getState()!==tileState.WALL){
                 grid[chargerY][chargerX]=new Tile(tileState.CHARGER);
             }

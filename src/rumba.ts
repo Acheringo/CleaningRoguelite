@@ -63,9 +63,6 @@ export class Rumba {
 
     calcUpgrades(): void {
         this.stats.battery = this.startBattery + (this.levels.batterylvl - 1) * 20;
-        this.stats.cleaning = this.startClean + (this.levels.cleanlvl - 1) * 0.5;
-        this.stats.speed = this.startSpeed + (this.levels.speedlvl - 1) * 0.5;
-        this.stats.recharge = this.startRecharge + (this.levels.rechargelvl - 1) * 0.5;
     }
 
     upgradeLevel(levelType: keyof RumbaLevels): void {

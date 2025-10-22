@@ -5,6 +5,7 @@ import {} from './rumba.js';
 import { tileState } from './mapBuilder.js';
 import { Tile } from './mapBuilder.js';
 import { Map } from './mapBuilder.js';
+import { RepurchasablePowerUp } from './powerups.js';
 //document.body.style.backgroundColor = "#eef";
 let moveAllowed = true;
 let charging = false;
@@ -14,6 +15,7 @@ let time = 0;
 let level = 1;
 let rumbi = new Rumba(1, RumbaStatus.IDLE);
 let map;
+let batteryExtender = new RepurchasablePowerUp("Battery Extender", 1.7);
 rumbi.changePosition(25, 25);
 document.addEventListener("keydown", (event) => {
     if (moveAllowed) {
@@ -45,15 +47,57 @@ document.addEventListener("keydown", (event) => {
         }
     }
 });
+// Tabla de powerups: base y multiplicador (usa los del constructor RepurchasablePowerUp)
+const powerupsCfg = {
+    battery: { id: 'buy-battery', base: 20, mult: 1.7, lvl: () => rumbi.getLevels().batterylvl, up: () => rumbi.upgradeLevel('batterylvl') },
+    charging: { id: 'buy-charging', base: 20, mult: 1.9, lvl: () => rumbi.getLevels().rechargelvl, up: () => rumbi.upgradeLevel('rechargelvl') }
+};
+function priceOf(base, mult, level) {
+    // nivel 1 = precio base
+    return Math.floor(base * Math.pow(mult, Math.max(0, level - 1)));
+}
+function renderPowerupsOnce() {
+    // Bind una sola vez
+    document.getElementById(powerupsCfg.battery.id)
+        ?.addEventListener('click', () => buyPowerup('battery'));
+    document.getElementById(powerupsCfg.charging.id)
+        ?.addEventListener('click', () => buyPowerup('charging'));
+}
+function buyPowerup(kind) {
+    const cfg = powerupsCfg[kind];
+    const lvl = cfg.lvl();
+    const price = priceOf(cfg.base, cfg.mult, lvl);
+    rumbi.calcUpgrades();
+    if (exp >= price) {
+        exp -= price;
+        cfg.up();
+        updateGame(); // refresca UI
+    }
+}
+function updatePowerupsUI() {
+    const expSpan = document.getElementById('exp-total');
+    if (expSpan)
+        expSpan.textContent = String(exp);
+    // Actualiza precios, niveles y disabled
+    ['battery', 'charging'].forEach((k) => {
+        const cfg = powerupsCfg[k];
+        const lvl = cfg.lvl();
+        const price = priceOf(cfg.base, cfg.mult, lvl);
+        const btn = document.getElementById(cfg.id);
+        const priceSpan = document.getElementById(`price-${k}`);
+        const lvlSpan = document.getElementById(`lvl-${k}`);
+        if (priceSpan)
+            priceSpan.textContent = String(price);
+        if (lvlSpan)
+            lvlSpan.textContent = String(lvl);
+        if (btn)
+            btn.disabled = exp < price;
+    });
+}
 function updateGame() {
     const mapDiv = document.getElementById('map');
     const statsDiv = document.getElementById('stats');
     const powerupsDiv = document.getElementById('powerups');
-    if (powerupsDiv) {
-        powerupsDiv.innerHTML = '';
-        powerupsDiv.innerHTML += `<h3>Power-ups Collected:</h3>`;
-        powerupsDiv.innerHTML += `<p>Total Experience: ${exp}</p>`;
-    }
     if (mapDiv)
         mapDiv.innerHTML = `<h3>Rumba Map(level: ${level}):</h3><br>`;
     map.showMap();
@@ -69,9 +113,9 @@ function updateGame() {
                     map.reduceDirtCount();
                     break;
                 case tileState.CHARGER:
-                    if (rumbi.getBattery() < 100) {
+                    if (rumbi.getBattery() < rumbi.getStats().battery) {
                         charging = true;
-                        rumbi.updateBattery(1);
+                        rumbi.updateBattery(rumbi.getStats().recharge);
                         break;
                     }
                     else {
@@ -114,6 +158,9 @@ function updateGame() {
         level++;
         start(level, rumbi);
     }
+    // Refresca UI de powerups sin recrear botones
+    if (powerupsDiv)
+        updatePowerupsUI();
 }
 function start(lvl, rumbi) {
     map = new Map(5 * lvl, 5 * lvl, rumbi);
@@ -121,6 +168,7 @@ function start(lvl, rumbi) {
     time = 0;
 }
 start(level, rumbi);
+renderPowerupsOnce();
 const ticker = setInterval(() => {
     updateGame();
     time += 0.05;
