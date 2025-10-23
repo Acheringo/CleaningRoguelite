@@ -128,5 +128,22 @@ export class Map {
             this.toClean--;
         }
     }
+    getClosestHealingPosition(rumbi) {
+        let closest = null;
+        let minDistance = Infinity;
+        for (let y = 0; y < this.height; y++) {
+            for (let x = 0; x < this.width; x++) {
+                const tile = this.grid[y]?.[x]?.getState();
+                if (tile === tileState.CHARGER) {
+                    const distance = Math.hypot(x - rumbi.position.x, y - rumbi.position.y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closest = { x: x, y: y };
+                    }
+                }
+            }
+        }
+        return closest;
+    }
 }
 //# sourceMappingURL=mapBuilder.js.map

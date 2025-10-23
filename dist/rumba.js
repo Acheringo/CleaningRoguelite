@@ -52,8 +52,18 @@ export class Rumba {
         this.position.x = newX;
         this.position.y = newY;
     }
-    updateBattery(change) {
-        this.bat += change;
+    updateBattery(change, ticks, every) {
+        if (ticks % every !== 0)
+            return;
+        if (this.bat + change > this.stats.battery) {
+            this.bat = this.stats.battery;
+        }
+        else if (this.bat + change < 0) {
+            this.bat = 0;
+        }
+        else {
+            this.bat += change;
+        }
     }
 }
 //# sourceMappingURL=rumba.js.map

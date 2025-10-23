@@ -38,6 +38,6 @@ export declare class Rumba {
     calcUpgrades(): void;
     upgradeLevel(levelType: keyof RumbaLevels): void;
     changePosition(newX: number, newY: number): void;
-    updateBattery(change: number): void;
+    updateBattery(change: number, ticks: number, every: number): void;
 }
 //# sourceMappingURL=rumba.d.ts.map

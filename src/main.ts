@@ -63,11 +63,65 @@ function autoMoveRandom(tick: number, every: number): void {
     moveAllowed = false; // marcar para que updateGame procese la casilla destino
 }
 
+function prioritizeHealing(tick: number, every: number){
+    if (every <= 0) return; // seguridad
+    if (tick% every !==0) return;
+    if(!moveAllowed) return;
+    if(rumbi.getBattery()<=0) return;
+    if(rumbi.getBattery()>30) autoMoveRandom(tick,every);
+    else if (Math.random()<0.6){
+        const xr=rumbi.position.x;
+        const yr=rumbi.position.y;
+        let chargerPos:{x: number, y: number} | null=null;
+        chargerPos=map.getClosestHealingPosition(rumbi);
+        if(chargerPos){
+            const dx=chargerPos.x - xr;
+            const dy=chargerPos.y - yr;
+            if(Math.abs(dx)>Math.abs(dy)){
+                // mover en x
+                const stepX=dx>0?1:-1;
+                const t=map.getTile(xr+stepX,yr);
+                if(t && t.getState() !== tileState.WALL){
+                    rumbi.changePosition(xr+stepX, yr);
+                }
+                else if(dy!==0){
+                    const stepY=dy>0?1:-1;
+                    const t2=map.getTile(xr,yr+stepY);
+                    if(t2 && t2.getState() !== tileState.WALL){
+                        rumbi.changePosition(xr, yr+stepY);
+                    }
+                }
+            }
+            else{
+                //mover en y
+                const stepY=dy>0?1:-1;
+                const t=map.getTile(xr,yr+stepY);
+                if(t && t.getState() !== tileState.WALL){
+                    rumbi.changePosition(xr, yr+stepY);
+                }
+                else if(dx!==0){
+                    const stepX=dx>0?1:-1;
+                    const t2=map.getTile(xr+stepX,yr);
+                    if(t2 && t2.getState() !== tileState.WALL){
+                        rumbi.changePosition(xr+stepX, yr);
+                    }
+                }
+            }
+            moveAllowed=false;
+        }
+    }
+    else{
+        autoMoveRandom(tick,every);
+        moveAllowed=false;
+    }
+}
+
 // Tabla de powerups: base y multiplicador (usa los del constructor RepurchasablePowerUp)
 const powerupsCfg = {
   battery: { id: 'buy-battery',  base: 20, mult: 1.7, lvl: () => rumbi.getLevels().batterylvl,  up: () => rumbi.upgradeLevel('batterylvl') },
   charging: {id: 'buy-charging', base: 20, mult: 1.9, lvl: ()=> rumbi.getLevels().rechargelvl, up: () => rumbi.upgradeLevel('rechargelvl')}
 };
+
 
 function priceOf(base: number, mult: number, level: number): number {
   // nivel 1 = precio base
@@ -115,12 +169,73 @@ function updatePowerupsUI() {
   });
 }
 
-function updateGame() {
+let currentMovementMode: 'random' | 'healing' = 'random';
+const HEALING_UPGRADE_PRICE = 5;
+let healingUpgradePurchased = false;
+
+function renderMovementUpgradesOnce() {
+    const movDiv = document.getElementById('movement-upgrades');
+    if (!movDiv) return;
+
+    movDiv.innerHTML = '<h3>Movement Upgrades</h3>';
+
+    // Botón para comprar prioritizeHealing
+    const healingBtn = document.createElement('button');
+    healingBtn.id = 'buy-healing-movement';
+    healingBtn.textContent = `Buy Smart Healing Movement (${HEALING_UPGRADE_PRICE} EXP)`;
+    healingBtn.addEventListener('click', () => {
+        if (exp >= HEALING_UPGRADE_PRICE && !healingUpgradePurchased) {
+            exp -= HEALING_UPGRADE_PRICE;
+            healingUpgradePurchased = true;
+            currentMovementMode = 'random';
+            updateMovementUI();
+            updateGame();
+        }
+    });
+    movDiv.appendChild(healingBtn);
+
+    // Selector de modo (solo visible después de comprar)
+    const modeDiv = document.createElement('div');
+    modeDiv.id = 'movement-mode-selector';
+    modeDiv.style.display = 'none';
+    modeDiv.innerHTML = `
+        <p>Movement Mode:</p>
+        <label><input type="radio" name="movement" value="random" checked> Random</label><br>
+        <label><input type="radio" name="movement" value="healing"> Smart Healing</label>
+    `;
+    movDiv.appendChild(modeDiv);
+
+    // Listeners para los radio buttons
+    const radios = modeDiv.querySelectorAll('input[name="movement"]');
+    radios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const target = e.target as HTMLInputElement;
+            currentMovementMode = target.value as 'random' | 'healing';
+        });
+    });
+}
+
+function updateMovementUI() {
+    const healingBtn = document.getElementById('buy-healing-movement') as HTMLButtonElement | null;
+    const modeSelector = document.getElementById('movement-mode-selector');
+
+    if (healingUpgradePurchased) {
+        if (healingBtn) healingBtn.style.display = 'none';
+        if (modeSelector) modeSelector.style.display = 'block';
+    } else {
+        if (healingBtn) {
+            healingBtn.disabled = exp < HEALING_UPGRADE_PRICE;
+            healingBtn.textContent = `Buy Smart Healing Movement (${HEALING_UPGRADE_PRICE} EXP)`;
+        }
+    }
+}
+
+function updateGame(lostmovement: number=-1, lostcleaning: number=-2) {
     const mapDiv = document.getElementById('map');
     const statsDiv = document.getElementById('stats');
     const powerupsDiv = document.getElementById('powerups');
 
-    if (mapDiv) mapDiv.innerHTML = `<h3>Rumba Map(level: ${level}):</h3><br>`;
+    if (mapDiv) mapDiv.innerHTML = `<h3>Level ${level} map:</h3><br>`;
     map.showMap();
     
     if(!moveAllowed){
@@ -129,7 +244,7 @@ function updateGame() {
             switch (currentTile.getState()) {
                 case tileState.DIRT:
                     map.changeTile(rumbi.position.x, rumbi.position.y, tileState.CLEAN);
-                    rumbi.updateBattery(-2);
+                    rumbi.updateBattery(lostcleaning,1,1);
                     moveAllowed=true;
                     points++;
                     map.reduceDirtCount();
@@ -137,7 +252,7 @@ function updateGame() {
                 case tileState.CHARGER:
                     if(rumbi.getBattery()<rumbi.getStats().battery){
                         charging=true;
-                        rumbi.updateBattery(rumbi.getStats().recharge);
+                        rumbi.updateBattery(rumbi.getStats().recharge,tickCount,healingInterval);
                         break;
                     }
                     else{
@@ -147,14 +262,14 @@ function updateGame() {
                     }
                 case tileState.POWERUP:
                     map.changeTile(rumbi.position.x, rumbi.position.y, tileState.CLEAN);
-                    rumbi.updateBattery(-1);
+                    rumbi.updateBattery(lostmovement,1,1);
                     exp++;
                     moveAllowed=true;
                     break;
                 default:
                     moveAllowed=true;
                     charging=false;
-                    rumbi.updateBattery(-1);
+                    rumbi.updateBattery(lostmovement,1,1);
                     break;
             }
         }
@@ -162,9 +277,8 @@ function updateGame() {
     
     if(statsDiv) {
         statsDiv.innerHTML = `
-            <h2>Rumba Stats</h2><br>
+            <h2>Robot Stats</h2><br>
             Battery: ${rumbi.getBattery()} %<br>
-            Status: ${rumbi.getStatus()}<br>
             Points: ${points}<br>
             Experience: ${exp}<br>
             Remaining dirt patches: ${map.getToClean()}<br>
@@ -180,12 +294,12 @@ function updateGame() {
     if(rumbi.getBattery()<=0){
         stopTicker(); // DETENER el loop aquí
         if(statsDiv) {
-            statsDiv.innerHTML = `<h2>Rumba Stats</h2><br>Battery depleted! Game Over.<br><br>`;
+            statsDiv.innerHTML = `<h2>Robot Stats</h2><br>Battery depleted! Game Over.<br><br>`;
             // only create the button once
             if(!document.getElementById('btn-restart')) {
                 const btn = document.createElement('button');
                 btn.id = 'btn-restart';
-                btn.textContent = 'Reiniciar (mantener EXP)';
+                btn.textContent = 'Restart (keep EXP and upgrades)';
                 btn.addEventListener('click', () => {
                     console.log('Clicked button');
                     // reset score only, keep experience
@@ -203,7 +317,7 @@ function updateGame() {
                     // ensure stats reflect upgrades and restore battery to full
                     rumbi.calcUpgrades();
                     const maxBat = rumbi.getStats().battery;
-                    rumbi.updateBattery(maxBat);
+                    rumbi.updateBattery(maxBat,1,1);
 
                     // reset tick counter / flags so automatic movement resumes correctly
                     tickCount = 0;
@@ -230,6 +344,7 @@ function updateGame() {
 
     // Refresca UI de powerups sin recrear botones
     if (powerupsDiv) updatePowerupsUI();
+    updateMovementUI();
 }
 
 function start(lvl:number, rumbi:Rumba){
@@ -240,17 +355,30 @@ function start(lvl:number, rumbi:Rumba){
 
 start(level,rumbi);
 let tickCount=0;
-let autoMoveInterval=10;
+let autoMoveInterval=50;
+let healingInterval=5;
 renderPowerupsOnce();
+renderMovementUpgradesOnce();
 let ticker:number | null=null;
 function startTicker(){
+    let lostmovement:number;
+    let lostcleaning: number;
     if(ticker) clearInterval(ticker);
     ticker = setInterval(() => {
-        autoMoveRandom(tickCount, autoMoveInterval);
-        updateGame();
-        time += 0.05;
+        // Elegir función de movimiento según el modo actual
+        if (currentMovementMode === 'healing') {
+            prioritizeHealing(tickCount, autoMoveInterval);
+            lostmovement = -2;
+            lostcleaning = -2;
+        } else {
+            autoMoveRandom(tickCount, autoMoveInterval);
+            lostmovement=-1;
+            lostcleaning=-2;
+        }
+        updateGame(lostmovement, lostcleaning);
+        time += 0.01;
         tickCount++;
-    }, 50);
+    }, 10);
 }
 
 function stopTicker(){

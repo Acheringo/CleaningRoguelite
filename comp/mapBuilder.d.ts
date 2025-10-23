@@ -29,5 +29,9 @@ export declare class Map {
     changeTile(x: number, y: number, nuevo: tileState): void;
     getToClean(): number;
     reduceDirtCount(): void;
+    getClosestHealingPosition(rumbi: Rumba): {
+        x: number;
+        y: number;
+    } | null;
 }
 //# sourceMappingURL=mapBuilder.d.ts.map

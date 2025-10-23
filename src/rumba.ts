@@ -76,7 +76,16 @@ export class Rumba {
         this.position.y = newY;
     }
 
-    updateBattery(change: number):void{
-        this.bat+=change;
+    updateBattery(change: number, ticks: number, every:number):void{
+        if(ticks % every !== 0) return;
+        if(this.bat + change > this.stats.battery){
+            this.bat = this.stats.battery;
+        }
+        else if(this.bat + change < 0){
+            this.bat = 0;
+        } 
+        else {
+            this.bat += change;
+        }
     }
 }
